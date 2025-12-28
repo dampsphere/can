@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NZXT Video Monitor</title>
+    <style>
+        /* Reset margins to ensure full coverage */
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #000; /* Fallback color if video loads slowly */
+        }
+
+        /* --- The Background Video --- */
+        #bg-video {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            min-width: 100%;
+            min-height: 100%;
+            width: auto;
+            height: auto;
+            /* Ensures video covers entire area without stretching */
+            object-fit: cover; 
+            /* Centers the video */
+            transform: translateX(-50%) translateY(-50%);
+            z-index: -1; /* Puts it behind everything */
+        }
+
+        /* --- The Stats Overlay Container --- */
+        .overlay-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            /* Flexbox used to center and arrange the stats items */
+            display: flex;
+            flex-direction: row; /* Arrange items side-by-side */
+            justify-content: space-around;
+            align-items: center;
+            /* Text Styling */
+            color: #ffffff;
+            /* Crucial: Text shadow makes text readable over busy videos */
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.9), 0px 0px 10px rgba(0,0,0,0.5);
+        }
+
+        /* Individual Stat Box Styling */
+        .stat-box {
+            text-align: center;
+            padding: 10px;
+        }
+
+        /* Labels (CPU / GPU) */
+        .label {
+            font-size: 1.2rem;
+            font-weight: 600;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        /* The temperature numbers */
+        .value {
+            font-size: 3.5rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+        
+        /* Smaller degree symbol */
+        .unit {
+             font-size: 2rem;
+             vertical-align: super;
+        }
+    </style>
+</head>
+<body>
+
+    <video id="bg-video" autoplay loop muted playsinline>
+        <source src="background.mp4" type="video/mp4">
+    </video>
+
+
+    <div class="overlay-container">
+        <div class="stat-box">
+            <div class="label">CPU</div>
+            <div class="value">
+                <span id="cpu-temp">--</span><span class="unit">°C</span>
+            </div>
+        </div>
+
+        <div class="stat-box">
+            <div class="label">GPU</div>
+            <div class="value">
+                 <span id="gpu-temp">--</span><span class="unit">°C</span>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        console.log("NZXT Video Overlay Loaded");
+
+        // Setup the NZXT listener object
+        window.nzxt = {
+            v1: {
+                onMonitoringDataUpdate: (data) => {
+                    try {
+                        updateStats(data);
+                    } catch (err) {
+                        console.error("Error processing CAM data:", err);
+                    }
+                }
+            }
+        };
+
+        function updateStats(data) {
+            // --- Update CPU ---
+            // We check if cpus exist and have at least one entry
+            if (data.cpus && data.cpus.length > 0) {
+                // Get temp and round it to a whole number
+                const cpuT = Math.round(data.cpus[0].temperature);
+                document.getElementById('cpu-temp').innerText = cpuT;
+            }
+
+            // --- Update GPU ---
+            // Some systems have iGPUs (integrated) and dGPUs (discrete). 
+            // This script tries to find the discrete GPU first by looking for higher loads or temps,
+            // but for simplicity, taking the first one often works. 
+            if (data.gpus && data.gpus.length > 0) {
+                 // We grab the first GPU found in the array.
+                 const gpuT = Math.round(data.gpus[0].temperature);
+                 document.getElementById('gpu-temp').innerText = gpuT;
+            }
+        }
+
+        // Optional: Fallback if video fails to load, ensures text is still visible
+        const videoElement = document.getElementById('bg-video');
+        videoElement.onerror = function() {
+            console.error("Video failed to load. Check filename.");
+            document.body.style.backgroundColor = "#222"; // Dark grey background fallback
+        };
+    </script>
+
+</body>
+</html>
