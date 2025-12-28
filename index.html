@@ -17,20 +17,34 @@
         }
 
         /* --- The Background Video --- */
-        #bg-video {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            min-width: 100%;
-            min-height: 100%;
-            width: auto;
-            height: auto;
-            /* Ensures video covers entire area without stretching */
-            object-fit: cover; 
-            /* Centers the video */
-            transform: translateX(-50%) translateY(-50%);
-            z-index: -1; /* Puts it behind everything */
-        }
+      <video id="bg-video" autoplay loop muted playsinline>
+    <source src="background.mp4" type="video/mp4">
+    Video tag not supported.
+</video>
+<div id="debug-msg" style="position:absolute; top:10px; left:10px; color:red; font-size:20px; z-index:99;"></div>
+
+<script>
+    const vid = document.getElementById('bg-video');
+    const debug = document.getElementById('debug-msg');
+
+    // Force play command (sometimes helps with autoplay policies)
+    window.onload = function() {
+        vid.play().catch(error => {
+            debug.innerText = "Autoplay blocked or failed: " + error.message;
+        });
+    };
+
+    vid.addEventListener('error', function(e) {
+        // Generic error
+        debug.innerText = "Error loading video. Code: " + vid.error.code;
+    }, true);
+    
+    // Check if source failed specifically
+    const source = vid.querySelector('source');
+    source.addEventListener('error', function(e) {
+        debug.innerText = "Source file not found (404) or bad format.";
+    });
+</script>
 
         /* --- The Stats Overlay Container --- */
         .overlay-container {
