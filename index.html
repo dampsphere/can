@@ -3,92 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NZXT Video Monitor</title>
+    <title>NZXT Monitor Fixed</title>
     <style>
-        /* Reset margins to ensure full coverage */
+        /* 1. Basic Reset to remove white borders */
         body, html {
             margin: 0;
             padding: 0;
-            height: 100%;
             width: 100%;
+            height: 100%;
             overflow: hidden;
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: #000; /* Fallback color if video loads slowly */
+            background-color: #000;
+            font-family: sans-serif;
         }
 
-        /* --- The Background Video --- */
-      <video id="bg-video" autoplay loop muted playsinline>
-    <source src="background.mp4" type="video/mp4">
-    Video tag not supported.
-</video>
-<div id="debug-msg" style="position:absolute; top:10px; left:10px; color:red; font-size:20px; z-index:99;"></div>
+        /* 2. Video Styling - Forces it to fill the screen properly */
+        #bg-video {
+            position: fixed;     /* Locks video to the screen */
+            top: 0;
+            left: 0;
+            width: 100vw;        /* 100% of viewport width */
+            height: 100vh;       /* 100% of viewport height */
+            object-fit: cover;   /* Ensures video covers screen without stretching/distortion */
+            z-index: -1;         /* Puts video BEHIND everything else */
+        }
 
-<script>
-    const vid = document.getElementById('bg-video');
-    const debug = document.getElementById('debug-msg');
-
-    // Force play command (sometimes helps with autoplay policies)
-    window.onload = function() {
-        vid.play().catch(error => {
-            debug.innerText = "Autoplay blocked or failed: " + error.message;
-        });
-    };
-
-    vid.addEventListener('error', function(e) {
-        // Generic error
-        debug.innerText = "Error loading video. Code: " + vid.error.code;
-    }, true);
-    
-    // Check if source failed specifically
-    const source = vid.querySelector('source');
-    source.addEventListener('error', function(e) {
-        debug.innerText = "Source file not found (404) or bad format.";
-    });
-</script>
-
-        /* --- The Stats Overlay Container --- */
+        /* 3. Overlay Styling - Places text on top */
         .overlay-container {
-            position: absolute;
+            position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            /* Flexbox used to center and arrange the stats items */
-            display: flex;
-            flex-direction: row; /* Arrange items side-by-side */
-            justify-content: space-around;
-            align-items: center;
+            display: flex;       /* Uses Flexbox to align items */
+            justify-content: space-evenly; /* Spacing between CPU and GPU */
+            align-items: center; /* Vertical centering */
+            z-index: 10;         /* Puts text IN FRONT of video */
+            
             /* Text Styling */
-            color: #ffffff;
-            /* Crucial: Text shadow makes text readable over busy videos */
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.9), 0px 0px 10px rgba(0,0,0,0.5);
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0,0,0,1); /* Strong shadow for readability */
         }
 
-        /* Individual Stat Box Styling */
         .stat-box {
             text-align: center;
-            padding: 10px;
         }
 
-        /* Labels (CPU / GPU) */
         .label {
-            font-size: 1.2rem;
-            font-weight: 600;
-            opacity: 0.9;
+            font-size: 1.5rem; /* Adjust this number to make labels bigger/smaller */
+            font-weight: bold;
             margin-bottom: 5px;
+            color: #ddd;
         }
 
-        /* The temperature numbers */
         .value {
-            font-size: 3.5rem;
+            font-size: 4rem;   /* Adjust this number to make numbers bigger/smaller */
             font-weight: 800;
-            line-height: 1;
         }
-        
-        /* Smaller degree symbol */
+
         .unit {
-             font-size: 2rem;
-             vertical-align: super;
+            font-size: 2rem;
         }
     </style>
 </head>
@@ -98,67 +71,37 @@
         <source src="background.mp4" type="video/mp4">
     </video>
 
-
     <div class="overlay-container">
         <div class="stat-box">
             <div class="label">CPU</div>
             <div class="value">
-                <span id="cpu-temp">--</span><span class="unit">°C</span>
+                <span id="cpu-temp">--</span><span class="unit">°</span>
             </div>
         </div>
 
         <div class="stat-box">
             <div class="label">GPU</div>
             <div class="value">
-                 <span id="gpu-temp">--</span><span class="unit">°C</span>
+                <span id="gpu-temp">--</span><span class="unit">°</span>
             </div>
         </div>
     </div>
 
-
     <script>
-        console.log("NZXT Video Overlay Loaded");
-
-        // Setup the NZXT listener object
         window.nzxt = {
             v1: {
                 onMonitoringDataUpdate: (data) => {
-                    try {
-                        updateStats(data);
-                    } catch (err) {
-                        console.error("Error processing CAM data:", err);
+                    // Update CPU
+                    if (data.cpus && data.cpus.length > 0) {
+                        document.getElementById('cpu-temp').innerText = Math.round(data.cpus[0].temperature);
+                    }
+                    // Update GPU
+                    if (data.gpus && data.gpus.length > 0) {
+                        document.getElementById('gpu-temp').innerText = Math.round(data.gpus[0].temperature);
                     }
                 }
             }
         };
-
-        function updateStats(data) {
-            // --- Update CPU ---
-            // We check if cpus exist and have at least one entry
-            if (data.cpus && data.cpus.length > 0) {
-                // Get temp and round it to a whole number
-                const cpuT = Math.round(data.cpus[0].temperature);
-                document.getElementById('cpu-temp').innerText = cpuT;
-            }
-
-            // --- Update GPU ---
-            // Some systems have iGPUs (integrated) and dGPUs (discrete). 
-            // This script tries to find the discrete GPU first by looking for higher loads or temps,
-            // but for simplicity, taking the first one often works. 
-            if (data.gpus && data.gpus.length > 0) {
-                 // We grab the first GPU found in the array.
-                 const gpuT = Math.round(data.gpus[0].temperature);
-                 document.getElementById('gpu-temp').innerText = gpuT;
-            }
-        }
-
-        // Optional: Fallback if video fails to load, ensures text is still visible
-        const videoElement = document.getElementById('bg-video');
-        videoElement.onerror = function() {
-            console.error("Video failed to load. Check filename.");
-            document.body.style.backgroundColor = "#222"; // Dark grey background fallback
-        };
     </script>
-
 </body>
 </html>
